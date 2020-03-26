@@ -41,7 +41,7 @@ print("label={}".format(labels[0]))
 
 # 学習用データセット
 train = torch.utils.data.TensorDataset(torch.from_numpy(np.array(digits.data)).float(), torch.from_numpy(np.array(labels)).float())
-train_loader = torch.utils.data.DataLoader(train, batch_size=5)
+train_loader = torch.utils.data.DataLoader(train, batch_size=5, shuffle=True)
 
 
 # フィードフォワード・ネットワーク
@@ -65,7 +65,8 @@ criterion = nn.MSELoss()
 # オプティマイザ（ADAM）
 optimizer = optim.Adam(network.parameters(), lr=0.01)
 
-for epoch in range(1):
+# 学習
+for epoch in range(3):
     for i, (inputs, labels) in enumerate(train_loader):
         
         #print("inputs: {}".format(inputs))
@@ -78,18 +79,18 @@ for epoch in range(1):
         
         # 損失の取得
         loss = criterion(outputs, labels)
-
+        
         # 勾配の初期化
         optimizer.zero_grad()
-
-        # 勾配の計算
-        loss.backward()
+        
+        # 勾配の計算（損失関数を微分）
+        loss.backward()        
 
         # パラメータの更新
         optimizer.step()
         
-        if (i % 10) == 0:
-            print("Epoch={} Step={} Loss={:.3f}".format(epoch, i, loss))        
+        if (i % 30) == 0:
+            print("Epoch={} Step={} Loss={:.3f}".format(epoch, i, loss))
 
 # 検証
 index = 0
