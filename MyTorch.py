@@ -10,6 +10,9 @@ from torch.autograd import Variable
 import numpy as np
 import matplotlib.pyplot as plt
 
+# Numpyの表示形式
+np.set_printoptions(precision=3, suppress=True)
+
 # 手書き文字認識用データセット
 digits = load_digits(n_class=10)
 
@@ -36,20 +39,10 @@ print("label={}".format(labels[0]))
 #plt.imshow(digits.data[0].reshape((8, 8)), cmap="gray")
 #plt.show()
 
-#学習用と評価用に分割
-splitted_dataset = train_test_split(digits.data, labels)
-#print("Train Data:{}".format(splitted_dataset[0][0]))
-#print("Test Data:{}".format(splitted_dataset[1][0]))
-#print("Train Label:{}".format(splitted_dataset[2][0]))
-#print("Test Label:{}".format(splitted_dataset[3][0]))
-
 # 学習用データセット
-train = torch.utils.data.TensorDataset(torch.from_numpy(np.array(splitted_dataset[0])).float(), torch.from_numpy(np.array(splitted_dataset[2])).float())
-train_loader = torch.utils.data.DataLoader(train, batch_size=5, shuffle=True)
+train = torch.utils.data.TensorDataset(torch.from_numpy(np.array(digits.data)).float(), torch.from_numpy(np.array(labels)).float())
+train_loader = torch.utils.data.DataLoader(train, batch_size=5)
 
-# 評価用データセット
-test = torch.utils.data.TensorDataset(torch.from_numpy(np.array(splitted_dataset[1])).float(), torch.from_numpy(np.array(splitted_dataset[3])).float())
-test_loader = torch.utils.data.DataLoader(train, batch_size=5, shuffle=True)
 
 # フィードフォワード・ネットワーク
 class Net(nn.Module):
@@ -60,43 +53,49 @@ class Net(nn.Module):
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
-        x = F.softmax(self.fc2(x))
+        x = F.softmax(self.fc2(x), dim=0)
         return x
 
 # ネットワークの初期化
 network = Net()
 
-# 損失関数（交差エントロピー誤差）
-criterion = nn.CrossEntropyLoss()
+# 損失関数（平均2乗誤差）
+criterion = nn.MSELoss()
 
-# オプティマイザ（確率的勾配降下法）
-optimizer = optim.SGD(network.parameters(), lr=0.001, momentum=0.9)
+# オプティマイザ（ADAM）
+optimizer = optim.Adam(network.parameters(), lr=0.01)
 
-for epoch in range(2):
-    for i, data in enumerate(train_loader):
-
-        # 学習データとラベル
-        inputs, labels = data
+for epoch in range(1):
+    for i, (inputs, labels) in enumerate(train_loader):
         
-        # Variable型に変換
-        inputs = Variable(inputs)
-        labels = Variable(labels)
-        
-        # オプティマイザの初期化
-        optimizer.zero_grad()
+        #print("inputs: {}".format(inputs))
+        #print("labels: {}".format(labels))            
 
         # 入力に対する出力を取得
         outputs = network(inputs)
 
-        print("inputs: {}".format(inputs))
-        print("outputs: {}".format(outputs))
-        print("labels: {}".format(labels))
+        #print("outputs: {}".format(outputs))
         
         # 損失の取得
         loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
 
-        print("Step. {} Loss={}".format(i, loss))
+        # 勾配の初期化
+        optimizer.zero_grad()
+
+        # 勾配の計算
+        loss.backward()
+
+        # パラメータの更新
+        optimizer.step()
         
-    
+        if (i % 10) == 0:
+            print("Epoch={} Step={} Loss={:.3f}".format(epoch, i, loss))        
+
+# 検証
+index = 0
+input = train[index][0]
+output = network(input)
+print("input={}".format(input.detach().numpy()))
+print("label={}".format(train[index][1].detach().numpy()))
+print("output={}".format(output.detach().numpy()))
+
